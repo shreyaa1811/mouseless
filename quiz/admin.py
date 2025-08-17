@@ -102,11 +102,11 @@ class SiteSettingAdmin(admin.ModelAdmin):
         ('Challenge Phase Control', {
             'fields': ('dark_mode',),
             'description': '''
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">
-                <h3 style="color: #0069a7; margin-top: 0;">Phase Management</h3>
+            <div style="background: #2c3e50; padding: 15px; border-radius: 5px; margin: 10px 0; color: #ecf0f1; border: 1px solid #34495e;">
+                <h3 style="color: #3498db; margin-top: 0;">Phase Management</h3>
                 <p><strong>Mouseless Phase (Light Mode OFF):</strong> Participants use only keyboard navigation</p>
                 <p><strong>Keyboardless Phase (Dark Mode ON):</strong> Participants use only mouse navigation</p>
-                <hr>
+                <hr style="border-color: #34495e;">
                 <p><em>⚠️ Switching phases will automatically update all participant progress and save their mouseless scores when moving to keyboardless phase.</em></p>
             </div>
             '''

@@ -22,14 +22,13 @@
             <div class="col-md-6">
                 <div class="card h-100" style="background-color: white; border: 1px solid #0069d9;">
                     <div class="card-header" style="background-color: #0069d9; color: white;">
-                        <h5><i class="fas fa-mouse"></i> {% if dark_mode_enabled %}Keyboardless{% else %}Mouseless{% endif %} Challenge</h5>
+                        <h5 style="color: white;"><i class="fas fa-mouse"></i> {% if dark_mode_enabled %}Keyboardless{% else %}Mouseless{% endif %} Challenge</h5>
                     </div>
                     <div class="card-body" style="background-color: white; color: black;">
                         {% if dark_mode_enabled %}
                         <p>In this phase, you must solve challenges using <strong>only your mouse</strong>:</p>
                         <ul>
                             <li>No keyboard input allowed</li>
-                            <li>Use virtual keyboards, copy-paste, or other mouse-only methods</li>
                             <li>Your mouseless score has been saved: <strong>{{ user.card.mouseless_score }} points</strong></li>
                         </ul>
                         {% else %}
@@ -46,7 +45,7 @@
             <div class="col-md-6">
                 <div class="card h-100" style="background-color: white; border: 1px solid #0069d9;">
                     <div class="card-header" style="background-color: #0069d9; color: white;">
-                        <h5><i class="fas fa-trophy"></i> Scoring & Competition</h5>
+                        <h5 style="color: white;"><i class="fas fa-trophy"></i> Scoring & Competition</h5>
                     </div>
                     <div class="card-body" style="background-color: white; color: black;">
                         <ul>
@@ -66,14 +65,13 @@
                 {% if dark_mode_enabled %}
                 <li>You <strong>cannot use your keyboard</strong> for navigation or input</li>
                 <li>Use only your mouse, trackpad, or other pointing devices</li>
-                <li>Virtual keyboards and copy-paste are allowed</li>
                 {% else %}
                 <li>You <strong>cannot use your mouse</strong> for navigation or clicking</li>
                 <li>Navigate using keyboard shortcuts and Tab navigation</li>
                 <li>Physical or virtual mouse usage is prohibited</li>
                 {% endif %}
-                <li>Call an ACM council member before starting to verify compliance</li>
-                <li>Challenge can only be played at the CP Lab</li>
+                <li>Call an ACM council member for any help/queries</li>
+                <li>Challenge can only be played at the designated Lab</li>
             </ul>
         </div>
         
