@@ -2,12 +2,12 @@
 {% load crispy_forms_tags %}
 {% block content %}
 <h2 class="mb-4">{{ object.name }}</h2>
-<div class="text-info">Points : {{ object.points }}</div>
+<div class="text-info">Points: {{ object.points }}</div>
 {% if not user.is_superuser %}
 {% if form.instance.value == form.instance.task.correct %}
-<div class="text-success mb-4"> Status : Complete </div>
+<div class="text-success mb-4">Status: Complete ✓</div>
 {% else %}
-<div class="text-danger mb-4"> Status : Incomplete </div>
+<div class="text-danger mb-4">Status: Incomplete</div>
 {% endif %}
 {% endif %}
 <div class="row">
@@ -15,13 +15,31 @@
     <article class="media content-section">
       <div class="media-body">
         {% if user.is_superuser %}
-        <div><b>Answer</b> : {{ task.correct }}</div>
+        <div class="alert alert-warning"><b>Admin View - Answer:</b> {{ task.correct }}</div>
         {% endif %}
         <p class="article-content">{{ object.formatted_markdown|safe }}</p>
+        
+        {% if object.document %}
+        <div class="document-section">
+          <h5><i class="fas fa-file-download"></i> Reference Document</h5>
+          <p>A reference document is available for this question:</p>
+          <a href="{{ object.document.url }}" target="_blank" class="document-link" download>
+            <i class="fas fa-download"></i> Download {{ object.document_name }}
+          </a>
+        </div>
+        {% endif %}
+        
         {% if form.instance.value != form.instance.task.correct and not user.is_superuser %}
-        <a href="{% url 'show-hint' task.id %}">Show Hint</a>
-        <br>
-        (Point penalty: <b>{{ task.hint_points }}</b> for the first time that you take this hint, so be careful!! Note: Once a hint is bought, it can be reviewed later without any loss in points.)
+        <div class="mt-3">
+          <h5>Need Help?</h5>
+          <p><strong>Hint Available:</strong> {{ task.hint_points }} points required</p>
+          <a href="{% url 'show-hint' task.id %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-lightbulb"></i> Show Hint ({{ task.hint_points }} points)
+          </a>
+          <small class="text-muted d-block mt-2">
+            Note: Hints can only be purchased once per question. Once purchased, you can view it again without penalty.
+          </small>
+        </div>
         {% endif %}
       </div>
     </article>
@@ -32,14 +50,21 @@
       <form id="answer-form" method="POST" autocomplete="off">
         {% csrf_token %}
         <fieldset class="form-group">
-          <legend class="border-bottom mb-4">Answer</legend>
-          {{ form|crispy }}
+          <legend class="border-bottom mb-4">Submit Your Answer</legend>
+          <div class="form-group">
+            <label for="id_value">Your Answer:</label>
+            {{ form.value }}
+            <small class="form-text text-muted">Enter your final answer here</small>
+          </div>
         </fieldset>
         <div class="form-group">
-          <button class="btn btn-outline-info" type="submit">Submit</button>
+          <button class="btn btn-outline-info btn-block" type="submit">Submit Answer</button>
         </div>
-        <div id="error-message" class="text-danger mt-2" style="display: none;">
-            Incorrect answer
+        <div id="error-message" class="alert alert-danger mt-2" style="display: none;">
+          <i class="fas fa-times-circle"></i> Incorrect answer. Try again!
+        </div>
+        <div id="success-message" class="alert alert-success mt-2" style="display: none;">
+          <i class="fas fa-check-circle"></i> Correct! Well done!
         </div>
       </form>
     </div>
@@ -51,42 +76,31 @@
   document.addEventListener('DOMContentLoaded', function () {
       const form = document.getElementById('answer-form');
       const errorMessage = document.getElementById('error-message');
-      const correctAnswer = "{{ form.instance.task.correct }}".trim(); // Assuming the correct answer is available in the context
+      const successMessage = document.getElementById('success-message');
+      const correctAnswer = "{{ form.instance.task.correct }}".trim();
 
       form.addEventListener('submit', function(event) {
           event.preventDefault();   
  
-          const userAnswer = form.querySelector('input[name="value"]').value.trim(); // Update 'value' with the actual input name if different
+          const userAnswer = form.querySelector('input[name="value"]').value.trim();
  
           if (userAnswer === correctAnswer) { 
               errorMessage.style.display = 'none';
-              errorMessage.style.opacity = '1';  
- 
-              form.submit();
+              successMessage.style.display = 'block';
+              
+              setTimeout(() => {
+                  form.submit();
+              }, 1500);
           } else { 
+              successMessage.style.display = 'none';
               errorMessage.style.display = 'block';
-              errorMessage.style.opacity = '1';   
-              errorMessage.style.color = 'red';   
  
               setTimeout(() => {
-                  errorMessage.style.transition = 'opacity 0.5s ease-in-out'; 
-                  errorMessage.style.opacity = '0';   
-              }, 2000);
- 
-              errorMessage.addEventListener('transitionend', function() {
-                  if (errorMessage.style.opacity === '0') {
-                      errorMessage.style.display = 'none';   
-                      errorMessage.style.opacity = '1';  
-                  }
-              });
+                  errorMessage.style.display = 'none';
+              }, 3000);
           }
       });
   });
 </script>
-
-
-
-  
-  
 
 {% endblock content %}
