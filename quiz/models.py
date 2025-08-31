@@ -72,8 +72,13 @@ class Card(models.Model):
     def score(self):
         mouseless_score = self.answer_set.filter(value=F('task__correct'), task__question_type='mouseless').aggregate(score=Sum('task__points')).get('score') or 0
         keyboardless_score = self.answer_set.filter(value=F('task__correct'), task__question_type='keyboardless').aggregate(score=Sum('task__points')).get('score') or 0
-        total_score = mouseless_score + keyboardless_score - self.penalty_points
-        return total_score
+        
+        # Calculate total hint penalties from both phases
+        total_hints = Hint.objects.filter(user=self.user).count()
+        total_penalty = total_hints * 2  # 2 points penalty per hint
+        
+        total_score = mouseless_score + keyboardless_score - total_penalty
+        return max(0, total_score)
 
     @property
     def current_phase_score(self):
@@ -86,9 +91,22 @@ class Card(models.Model):
     def update_mouseless_score(self):
         """Update the saved mouseless score when switching to keyboardless phase"""
         score = self.answer_set.filter(value=F('task__correct'), task__question_type='mouseless').aggregate(score=Sum('task__points')).get('score') or 0
-        self.mouseless_score = score
+        # Subtract hint penalties for mouseless phase
+        mouseless_hints = Hint.objects.filter(user=self.user, hint_task__question_type='mouseless').count()
+        penalty = mouseless_hints * 2  # 2 points penalty per hint
+        self.mouseless_score = max(0, score - penalty)  # Ensure score doesn't go below 0
         self.save()
-        return score
+        return self.mouseless_score
+
+    def update_keyboardless_score(self):
+        """Update the saved keyboardless score when challenge is complete"""
+        score = self.answer_set.filter(value=F('task__correct'), task__question_type='keyboardless').aggregate(score=Sum('task__points')).get('score') or 0
+        # Subtract hint penalties for keyboardless phase
+        keyboardless_hints = Hint.objects.filter(user=self.user, hint_task__question_type='keyboardless').count()
+        penalty = keyboardless_hints * 2  # 2 points penalty per hint
+        self.keyboardless_score = max(0, score - penalty)  # Ensure score doesn't go below 0
+        self.save()
+        return self.keyboardless_score
 
     @property
     def last_time(self):
