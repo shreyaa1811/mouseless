@@ -12,12 +12,12 @@ class Task(models.Model):
         ('mouseless', 'Mouseless Challenge'),
         ('keyboardless', 'Keyboardless Challenge'),
     ]
-    
+
     name = models.CharField(max_length=256)
     text = MarkdownxField()
     points = models.IntegerField()
     correct = models.CharField(max_length=256)
-    hint = models.CharField(max_length=256, default='No hint!!')
+    hint = models.CharField(max_length=1000, default='No hint!!')
     hint_points = models.IntegerField(default=0)
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='mouseless')
     document = models.FileField(upload_to='task_documents/', null=True, blank=True, help_text='Upload reference document for participants')
@@ -28,19 +28,19 @@ class Task(models.Model):
     )
 
     class Meta:
-        ordering = ['order']
+        ordering = ['points', 'order']
 
     @property
     def formatted_markdown(self):
         return markdownify(self.text)
-    
+
     @property
     def document_name(self):
         """Get just the filename from the document path"""
         if self.document:
             return self.document.name.split('/')[-1]
         return None
-    
+
     def is_completed(self, user):
         return Answer.objects.filter(card__user=user, task=self, value=self.correct).exists()
 
@@ -59,15 +59,15 @@ class Card(models.Model):
     @property
     def solved_questions(self):
         return self.answer_set.filter(value=F('task__correct')).count()
-    
+
     @property
     def mouseless_solved_questions(self):
         return self.answer_set.filter(value=F('task__correct'), task__question_type='mouseless').count()
-    
+
     @property
     def keyboardless_solved_questions(self):
         return self.answer_set.filter(value=F('task__correct'), task__question_type='keyboardless').count()
-    
+
     @property
     def score(self):
         mouseless_score = self.answer_set.filter(value=F('task__correct'), task__question_type='mouseless').aggregate(score=Sum('task__points')).get('score') or 0
@@ -95,7 +95,7 @@ class Card(models.Model):
         last_time = self.answer_set.filter(value=F('task__correct')).aggregate(last_time=Max('submit')).get('last_time')
         if last_time is None:
             return None
-        
+
         return str(last_time - self.start)
 
 class Answer(models.Model):
@@ -107,7 +107,7 @@ class Answer(models.Model):
 
     class Meta:
         unique_together = (('card', 'task'),)
-        
+
 class Hint(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
     hint_task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="hint_task")

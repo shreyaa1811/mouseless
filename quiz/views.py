@@ -51,11 +51,11 @@ class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         context = super().get_context_data(**kwargs)
         #if not self.request.user.is_superuser:
         card, _ = Card.objects.get_or_create(user=self.request.user)
-        
+
         # Get current mode from site settings
         site_setting = SiteSetting.objects.first()
         current_mode = 'keyboardless' if (site_setting and site_setting.dark_mode) else 'mouseless'
-        
+
         # Update user's phase if it doesn't match current mode
         if card.phase != current_mode:
             if current_mode == 'keyboardless':
@@ -64,7 +64,7 @@ class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                 card.penalty_points = 0  # Reset penalties for new phase
             card.phase = current_mode
             card.save()
-        
+
         context['card'] = card
         context['current_phase'] = current_mode
 
@@ -74,9 +74,9 @@ class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         # Get current mode from site settings
         site_setting = SiteSetting.objects.first()
         current_mode = 'keyboardless' if (site_setting and site_setting.dark_mode) else 'mouseless'
-        
+
         # Only show tasks for the current phase
-        tasks = Task.objects.filter(question_type=current_mode).order_by('order', 'points')
+        tasks = Task.objects.filter(question_type=current_mode).order_by('points', 'order')
         for task in tasks:
             task.completed = task.is_completed(self.request.user)
         return tasks
@@ -133,11 +133,11 @@ def leaderboard(request):
     leaderboard = list(filter(lambda t: t.score > 0 and not t.user.is_superuser, Card.objects.all()))
     if len(leaderboard) > 0:
         leaderboard = sorted(leaderboard, key=lambda t: (-t.score, t.last_time))[:10]
-    
+
     # Get current mode for context
     site_setting = SiteSetting.objects.first()
     current_mode = 'keyboardless' if (site_setting and site_setting.dark_mode) else 'mouseless'
-    
+
     context = {
         'leaderboard': leaderboard,
         'current_mode': current_mode
@@ -150,10 +150,10 @@ def showHint(request, pk):
     task = Task.objects.get(id=pk)
     card = Card.objects.get(user=request.user)
     hint_check = Hint.objects.filter(user=request.user, hint_task=task).exists()
-    
+
     # Use current phase score for hint validation
     current_score = card.current_phase_score
-    
+
     if ((current_score < task.hint_points) and (not(hint_check))):
         context = {
             'required_points': task.hint_points,
@@ -163,10 +163,10 @@ def showHint(request, pk):
         return render(request, 'quiz/no_hint.html', context)
     else:
         if hint_check:
-            hint = task.hint 
+            hint = task.hint
             return render(request, 'quiz/hint.html', {'hint': hint, 'task_name': task.name})
-        hint = task.hint 
-        card.penalty_points += task.hint_points 
+        hint = task.hint
+        card.penalty_points += task.hint_points
         card.save()
         h = Hint(user=request.user, hint_task=task)
         h.save()
