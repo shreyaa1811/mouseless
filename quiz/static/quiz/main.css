@@ -97,22 +97,22 @@ body {
 }
 
 .completed-task {
-  background-color: #90EE90;   /* Light green for light mode */
-  color: black;
+  background-color: #0069d9;   /* Blue color matching top bar */
+  color: white;
 }
 
 .table-success {
-  background-color: #90EE90 !important;   /* Light green for light mode */
-  color: black !important;
+  background-color: #0069d9 !important;   /* Blue color matching top bar */
+  color: white !important;
 }
 
 .table-success a {
-  color: black !important;
+  color: white !important;
   text-decoration: none;
 }
 
 .table-success a:hover {
-  color: #0069d9 !important;
+  color: #cce7ff !important;
   text-decoration: underline;
 }
 
