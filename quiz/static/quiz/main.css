@@ -102,17 +102,18 @@ body {
 }
 
 .table-success {
-  background-color: #0069d9 !important;   /* Blue color matching top bar */
-  color: white !important;
+  background-color: #90EE90 !important;   /* Light green for highlighted row */
+  color: #000 !important;                /* Black text */
 }
 
-.table-success a {
-  color: white !important;
+.table-success a,
+.table-success a:visited {
+  color: #000 !important;                 /* Black links */
   text-decoration: none;
 }
 
 .table-success a:hover {
-  color: #cce7ff !important;
+  color: #0056b3 !important;              /* Dark blue on hover for contrast */
   text-decoration: underline;
 }
 
