@@ -71,55 +71,39 @@
 </div>
 
 <script>
+  // Celebration animation function
+  function triggerCelebration() {
+    const emojis = ["🎉", "🎊", "🙌", "🎈", "🎀", "🥳", "🎖️"];
+    const celebrationContainer = document.createElement('div');
+    celebrationContainer.className = 'celebration-container';
+    document.body.appendChild(celebrationContainer);
+
+    // Create multiple falling emojis
+    for (let i = 0; i < 25; i++) {
+      setTimeout(() => {
+        const emoji = document.createElement('div');
+        emoji.className = 'falling-emoji';
+        emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        emoji.style.left = Math.random() * 95 + '%';
+        emoji.style.animationDelay = Math.random() * 1 + 's';
+        emoji.style.animationDuration = (3 + Math.random() * 2) + 's';
+        celebrationContainer.appendChild(emoji);
+      }, Math.random() * 500);
+    }
+
+    // Remove the celebration container after animation completes
+    setTimeout(() => {
+      if (document.body.contains(celebrationContainer)) {
+        document.body.removeChild(celebrationContainer);
+      }
+    }, 6000);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
       const form = document.getElementById('answer-form');
       const errorMessage = document.getElementById('error-message');
       const successMessage = document.getElementById('success-message');
       const correctAnswer = "{{ form.instance.task.correct }}".trim();
-
-      // Function to show celebration animation from textbox
-      function showCelebration() {
-          const answerInput = form.querySelector('input[name="value"]');
-          const inputRect = answerInput.getBoundingClientRect();
-          
-          // Create multiple celebration emojis
-          for (let i = 0; i < 15; i++) {
-              setTimeout(() => {
-                  const emoji = document.createElement('div');
-                  emoji.classList.add('celebration-emoji');
-                  emoji.textContent = '🎉';
-                  
-                  // Start position near the answer textbox
-                  const startX = inputRect.left + inputRect.width / 2;
-                  const startY = inputRect.top + inputRect.height / 2;
-                  
-                  emoji.style.left = startX + 'px';
-                  emoji.style.top = startY + 'px';
-                  
-                  // Random direction and distance
-                  const angle = (Math.PI * 2 * i) / 15; // Spread in circle
-                  const distance = 100 + Math.random() * 200;
-                  const endX = startX + Math.cos(angle) * distance;
-                  const endY = startY + Math.sin(angle) * distance - Math.random() * 100;
-                  
-                  emoji.style.setProperty('--end-x', endX + 'px');
-                  emoji.style.setProperty('--end-y', endY + 'px');
-                  
-                  // Update animation with random movement
-                  emoji.style.animation = `celebrationMove 2s ease-out ${i * 0.1}s forwards`;
-                  emoji.style.transform = `translateX(${endX - startX}px) translateY(${endY - startY}px)`;
-                  
-                  document.body.appendChild(emoji);
-                  
-                  // Remove emoji after animation
-                  setTimeout(() => {
-                      if (emoji.parentNode) {
-                          emoji.parentNode.removeChild(emoji);
-                      }
-                  }, 2500);
-              }, i * 100);
-          }
-      }
 
       form.addEventListener('submit', function(event) {
           event.preventDefault();   
@@ -130,12 +114,13 @@
               errorMessage.style.display = 'none';
               successMessage.style.display = 'block';
               
-              // Show celebration animation
-              showCelebration();
+              // Trigger celebration animation
+              triggerCelebration();
               
+              // Delay form submission to let users enjoy the celebration
               setTimeout(() => {
                   form.submit();
-              }, 3000);
+              }, 4000); // Changed from 5000ms to 4000ms (4 seconds)
           } else { 
               successMessage.style.display = 'none';
               errorMessage.style.display = 'block';
