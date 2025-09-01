@@ -77,45 +77,48 @@
       const successMessage = document.getElementById('success-message');
       const correctAnswer = "{{ form.instance.task.correct }}".trim();
 
-      // Function to create confetti
-      function createConfetti() {
-          for (let i = 0; i < 50; i++) {
-              const confetti = document.createElement('div');
-              confetti.classList.add('confetti');
-              confetti.style.left = Math.random() * 100 + 'vw';
-              confetti.style.animationDelay = Math.random() * 3 + 's';
-              confetti.style.animationDuration = (Math.random() * 2 + 1) + 's';
-              document.body.appendChild(confetti);
-              
-              // Remove confetti after animation
-              setTimeout(() => {
-                  if (confetti.parentNode) {
-                      confetti.parentNode.removeChild(confetti);
-                  }
-              }, 4000);
-          }
-      }
-
-      // Function to show celebration popup
+      // Function to show celebration animation from textbox
       function showCelebration() {
-          const popup = document.createElement('div');
-          popup.classList.add('celebration-popup');
-          popup.innerHTML = `
-              <span class="celebration-icon">🎉</span>
-              <div>Excellent!</div>
-              <div style="font-size: 16px; margin-top: 10px;">Correct Answer!</div>
-          `;
-          document.body.appendChild(popup);
+          const answerInput = form.querySelector('input[name="value"]');
+          const inputRect = answerInput.getBoundingClientRect();
           
-          // Create confetti
-          createConfetti();
-          
-          // Remove popup after animation
-          setTimeout(() => {
-              if (popup.parentNode) {
-                  popup.parentNode.removeChild(popup);
-              }
-          }, 3000);
+          // Create multiple celebration emojis
+          for (let i = 0; i < 15; i++) {
+              setTimeout(() => {
+                  const emoji = document.createElement('div');
+                  emoji.classList.add('celebration-emoji');
+                  emoji.textContent = '🎉';
+                  
+                  // Start position near the answer textbox
+                  const startX = inputRect.left + inputRect.width / 2;
+                  const startY = inputRect.top + inputRect.height / 2;
+                  
+                  emoji.style.left = startX + 'px';
+                  emoji.style.top = startY + 'px';
+                  
+                  // Random direction and distance
+                  const angle = (Math.PI * 2 * i) / 15; // Spread in circle
+                  const distance = 100 + Math.random() * 200;
+                  const endX = startX + Math.cos(angle) * distance;
+                  const endY = startY + Math.sin(angle) * distance - Math.random() * 100;
+                  
+                  emoji.style.setProperty('--end-x', endX + 'px');
+                  emoji.style.setProperty('--end-y', endY + 'px');
+                  
+                  // Update animation with random movement
+                  emoji.style.animation = `celebrationMove 2s ease-out ${i * 0.1}s forwards`;
+                  emoji.style.transform = `translateX(${endX - startX}px) translateY(${endY - startY}px)`;
+                  
+                  document.body.appendChild(emoji);
+                  
+                  // Remove emoji after animation
+                  setTimeout(() => {
+                      if (emoji.parentNode) {
+                          emoji.parentNode.removeChild(emoji);
+                      }
+                  }, 2500);
+              }, i * 100);
+          }
       }
 
       form.addEventListener('submit', function(event) {
