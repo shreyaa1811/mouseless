@@ -3,31 +3,31 @@ body {
     color: black;
     margin-top: 5rem;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     color: black;
   }
-  
+
   ul {
     margin: 0;
   }
-  
+
   .bg-steel {
     background-color: #0069d9;
   }
-  
+
   .site-header .navbar-nav .nav-link {
     color: white;
   }
-  
+
   .site-header .navbar-nav .nav-link:hover {
     color: #cce7ff;
   }
-  
+
   .site-header .navbar-nav .nav-link.active {
     font-weight: 500;
   }
-  
+
   .content-section {
     background: white;
     padding: 10px 20px;
@@ -35,50 +35,50 @@ body {
     border-radius: 3px;
     margin-bottom: 20px;
   }
-  
+
   .article-title {
     color: black;
   }
-  
+
   a.article-title:hover {
     color: #0069d9;
     text-decoration: none;
   }
-  
+
   .article-content {
     white-space: pre-line;
   }
-  
+
   .article-img {
     height: 65px;
     width: 65px;
     margin-right: 16px;
   }
-  
+
   .article-metadata {
     padding-bottom: 1px;
     margin-bottom: 4px;
     border-bottom: 1px solid #0069d9;
   }
-  
+
   .article-metadata a:hover {
     color: black;
     text-decoration: none;
   }
-  
+
   .article-svg {
     width: 25px;
     height: 25px;
     vertical-align: middle;
   }
-  
+
   .account-img {
     height: 125px;
     width: 125px;
     margin-right: 20px;
     margin-bottom: 16px;
   }
-  
+
   .account-heading {
     font-size: 2.5rem;
   }
@@ -436,10 +436,12 @@ body.dark-mode .table tr.table-success a {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 99999;
   overflow: hidden;
 }
 
