@@ -21,10 +21,8 @@
         
         {% if object.document %}
         <div class="document-section">
-          <h5><i class="fas fa-file-download"></i> Reference Document</h5>
-          <p>A reference document is available for this question:</p>
-          <a href="{{ object.document.url }}" target="_blank" class="document-link" download>
-            <i class="fas fa-download"></i> Download {{ object.document_name }}
+          <a href="{{ object.document.url }}" target="_blank" class="btn btn-primary document-link" download>
+            <i class="fas fa-download"></i> {{ object.document_name }}
           </a>
         </div>
         {% endif %}
@@ -79,6 +77,47 @@
       const successMessage = document.getElementById('success-message');
       const correctAnswer = "{{ form.instance.task.correct }}".trim();
 
+      // Function to create confetti
+      function createConfetti() {
+          for (let i = 0; i < 50; i++) {
+              const confetti = document.createElement('div');
+              confetti.classList.add('confetti');
+              confetti.style.left = Math.random() * 100 + 'vw';
+              confetti.style.animationDelay = Math.random() * 3 + 's';
+              confetti.style.animationDuration = (Math.random() * 2 + 1) + 's';
+              document.body.appendChild(confetti);
+              
+              // Remove confetti after animation
+              setTimeout(() => {
+                  if (confetti.parentNode) {
+                      confetti.parentNode.removeChild(confetti);
+                  }
+              }, 4000);
+          }
+      }
+
+      // Function to show celebration popup
+      function showCelebration() {
+          const popup = document.createElement('div');
+          popup.classList.add('celebration-popup');
+          popup.innerHTML = `
+              <span class="celebration-icon">🎉</span>
+              <div>Excellent!</div>
+              <div style="font-size: 16px; margin-top: 10px;">Correct Answer!</div>
+          `;
+          document.body.appendChild(popup);
+          
+          // Create confetti
+          createConfetti();
+          
+          // Remove popup after animation
+          setTimeout(() => {
+              if (popup.parentNode) {
+                  popup.parentNode.removeChild(popup);
+              }
+          }, 3000);
+      }
+
       form.addEventListener('submit', function(event) {
           event.preventDefault();   
  
@@ -88,9 +127,12 @@
               errorMessage.style.display = 'none';
               successMessage.style.display = 'block';
               
+              // Show celebration animation
+              showCelebration();
+              
               setTimeout(() => {
                   form.submit();
-              }, 1500);
+              }, 3000);
           } else { 
               successMessage.style.display = 'none';
               errorMessage.style.display = 'block';
