@@ -1,11 +1,11 @@
 from django.contrib import admin
-from .models import Task, Card, Answer, Hint, SiteSetting
+from .models import Task, Card, Answer, Hint, SiteSetting, BombForfeit
 from markdownx.admin import MarkdownxModelAdmin
 from adminsortable2.admin import SortableAdminMixin
 
 @admin.register(Task)
 class TaskAdmin(SortableAdminMixin, MarkdownxModelAdmin):
-    list_display = ('name', 'question_type', 'points', 'correct', 'order')
+    list_display = ('name', 'question_type', 'points', 'correct', 'order', 'has_time_bomb')
     list_filter = ('question_type',)
     list_editable = ('points',)
     search_fields = ('name', 'text')
@@ -25,6 +25,10 @@ class TaskAdmin(SortableAdminMixin, MarkdownxModelAdmin):
         ('Hint System', {
             'fields': ('hint', 'hint_points'),
             'description': 'Set up hints and their point cost'
+        }),
+        ('Time Bomb', {
+            'fields': ('has_time_bomb', 'bomb_duration'),
+            'description': 'Enable a ticking countdown for this question. If it hits zero before the participant answers correctly, the question explodes and is forfeited — no penalty, they just lose the chance to score it.'
         }),
         ('Challenge Type', {
             'fields': ('question_type',),
@@ -80,6 +84,15 @@ class HintAdmin(MarkdownxModelAdmin):
     def hint_cost(self, obj):
         return f"{obj.hint_task.hint_points} points"
     hint_cost.short_description = 'Cost'
+
+@admin.register(BombForfeit)
+class BombForfeitAdmin(admin.ModelAdmin):
+    fields = ("user", "task", "time_forfeited")
+    readonly_fields = ("time_forfeited",)
+    list_display = ("user", "task", "time_forfeited")
+    list_filter = ('task__question_type', 'time_forfeited')
+    search_fields = ('user__username', 'task__name')
+
 
 @admin.register(SiteSetting)
 class SiteSettingAdmin(admin.ModelAdmin):

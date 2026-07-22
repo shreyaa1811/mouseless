@@ -1,6 +1,28 @@
 {% extends "quiz/base.html" %}
 {% load crispy_forms_tags %}
 {% block content %}
+
+{% if object.has_time_bomb and form.instance.value != form.instance.task.correct and not user.is_superuser %}
+<div class="bomb-widget" id="bomb-widget" data-duration="{{ object.bomb_duration }}" data-task-id="{{ object.id }}" data-detonate-url="{% url 'bomb-detonate' object.id %}" data-tasklist-url="{% url 'task-list' %}">
+  <div class="bomb-widget-header">
+    <svg class="bomb-widget-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="14" r="7" fill="#3a3f4f"/>
+      <path d="M12 7 L14 3" stroke="#8a90a3" stroke-width="1.5" stroke-linecap="round"/>
+      <circle class="fuse-spark" cx="14" cy="3" r="1.6" fill="#ff9a3d"/>
+    </svg>
+    <span>Time Bomb</span>
+  </div>
+  <div class="bomb-widget-time" id="bomb-widget-time">--:--</div>
+  <div class="bomb-widget-bar-track">
+    <div class="bomb-widget-bar-fill" id="bomb-widget-bar"></div>
+  </div>
+</div>
+<div class="bomb-explosion-overlay" id="bomb-explosion-overlay">
+  <div class="bomb-shockwave" id="bomb-shockwave"></div>
+  <div class="bomb-explosion-text">💥 BOOM!</div>
+</div>
+{% endif %}
+
 <h2 class="mb-4">{{ object.name }}</h2>
 <div class="text-info">Points: {{ object.points }}</div>
 {% if not user.is_superuser %}
@@ -107,7 +129,92 @@
     }, 6000);
   }
 
+  // ---- Time Bomb logic ----
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    const bombWidget = document.getElementById('bomb-widget');
+    let bombInterval = null;
+
+    function stopBombTimer() {
+      if (bombInterval) {
+        clearInterval(bombInterval);
+        bombInterval = null;
+      }
+      if (bombWidget) {
+        bombWidget.style.display = 'none';
+      }
+    }
+
+    if (bombWidget) {
+      const duration = parseInt(bombWidget.dataset.duration, 10) || 60;
+      const detonateUrl = bombWidget.dataset.detonateUrl;
+      const taskListUrl = bombWidget.dataset.tasklistUrl;
+      const timeEl = document.getElementById('bomb-widget-time');
+      const barEl = document.getElementById('bomb-widget-bar');
+      const overlay = document.getElementById('bomb-explosion-overlay');
+      const shockwave = document.getElementById('bomb-shockwave');
+
+      let remaining = duration;
+      let detonated = false;
+
+      function render() {
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timeEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        const pct = Math.max(0, (remaining / duration) * 100);
+        barEl.style.width = pct + '%';
+
+        bombWidget.classList.remove('bomb-warning', 'bomb-critical');
+        if (pct <= 20) {
+          bombWidget.classList.add('bomb-critical');
+        } else if (pct <= 50) {
+          bombWidget.classList.add('bomb-warning');
+        }
+      }
+
+      function detonate() {
+        if (detonated) return;
+        detonated = true;
+
+        // Explosion visuals
+        overlay.classList.add('flash');
+        shockwave.classList.add('go');
+
+        // Notify server so the question is forfeited even if the user closes the tab
+        fetch(detonateUrl, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).finally(() => {
+          setTimeout(() => {
+            window.location.href = taskListUrl;
+          }, 1600);
+        });
+      }
+
+      render();
+      bombInterval = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          remaining = 0;
+          render();
+          clearInterval(bombInterval);
+          bombInterval = null;
+          detonate();
+        } else {
+          render();
+        }
+      }, 1000);
+    }
+
       const form = document.getElementById('answer-form');
       const errorMessage = document.getElementById('error-message');
       const successMessage = document.getElementById('success-message');
@@ -121,6 +228,9 @@
           if (userAnswer === correctAnswer) {
               errorMessage.style.display = 'none';
               successMessage.style.display = 'block';
+
+              // Defuse the bomb immediately so it can't detonate during the celebration delay
+              stopBombTimer();
 
               // Trigger celebration animation
               triggerCelebration();

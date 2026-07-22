@@ -26,6 +26,14 @@ class Task(models.Model):
         blank=False,
         null=False,
     )
+    has_time_bomb = models.BooleanField(
+        default=False,
+        help_text='Enable a ticking time-bomb countdown for this question. If the timer runs out before the participant solves it, the question is forfeited (no penalty, they just miss out on the points).'
+    )
+    bomb_duration = models.PositiveIntegerField(
+        default=60,
+        help_text='Time bomb countdown duration in seconds (only used if "Has time bomb" is enabled)'
+    )
 
     class Meta:
         ordering = ['points', 'order']
@@ -43,6 +51,9 @@ class Task(models.Model):
 
     def is_completed(self, user):
         return Answer.objects.filter(card__user=user, task=self, value=self.correct).exists()
+
+    def is_forfeited(self, user):
+        return self.has_time_bomb and BombForfeit.objects.filter(user=user, task=self).exists()
 
     def get_absolute_url(self):
         return reverse('task-detail', kwargs={'pk': self.pk})
@@ -130,6 +141,17 @@ class Hint(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
     hint_task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="hint_task")
     time_hint_taken = models.DateTimeField(auto_now=True)
+
+class BombForfeit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="bomb_forfeits")
+    time_forfeited = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('user', 'task'),)
+
+    def __str__(self):
+        return f"{self.user} forfeited {self.task}"
 
 class SiteSetting(models.Model):
     dark_mode = models.BooleanField(default=False, help_text="Enable dark mode for all users")

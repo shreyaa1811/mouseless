@@ -4,3 +4,4 @@ secret.key
 .venv
 .env
 venv
+*.sqlite3

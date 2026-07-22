@@ -7,8 +7,10 @@ from django.views.generic import (
     ListView,
     DetailView
 )
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from .forms import UserRegisterForm, AnswerForm
-from .models import Task, Card, Answer, Hint, SiteSetting
+from .models import Task, Card, Answer, Hint, SiteSetting, BombForfeit
 from django.views.generic.edit import FormMixin
 
 
@@ -79,6 +81,7 @@ class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         tasks = Task.objects.filter(question_type=current_mode).order_by('points', 'order')
         for task in tasks:
             task.completed = task.is_completed(self.request.user)
+            task.forfeited = task.is_forfeited(self.request.user)
         return tasks
 
 
@@ -105,6 +108,11 @@ class TaskDetailView(LoginRequiredMixin, UserPassesTestMixin, FormMixin, DetailV
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+
+        if not request.user.is_superuser and self.object.is_forfeited(request.user):
+            messages.warning(request, f'💥 "{self.object.name}" already blew up on you — it\'s off the table now.')
+            return redirect('task-list')
+
         card = self.request.user.card
         answer , _ = Answer.objects.get_or_create(card=card, task=self.object)
         form = AnswerForm(request.POST, instance=answer)
@@ -171,6 +179,22 @@ def showHint(request, pk):
         h = Hint(user=request.user, hint_task=task)
         h.save()
         return render(request, 'quiz/hint.html', {'hint': hint, 'task_name': task.name})
+
+@login_required(login_url='login')
+@require_POST
+def bombDetonate(request, pk):
+    task = Task.objects.get(id=pk)
+
+    if request.user.is_superuser or not task.has_time_bomb:
+        return JsonResponse({'status': 'ignored'})
+
+    # If they already solved it correctly (e.g. raced the timer), don't forfeit
+    already_correct = Answer.objects.filter(card__user=request.user, task=task, value=task.correct).exists()
+    if already_correct:
+        return JsonResponse({'status': 'already_solved'})
+
+    BombForfeit.objects.get_or_create(user=request.user, task=task)
+    return JsonResponse({'status': 'forfeited'})
 
 def get_dark_mode_setting():
     setting = SiteSetting.objects.first()
