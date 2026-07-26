@@ -571,7 +571,7 @@ body.dark-mode .table tr.table-success a {
   transform-origin: center;
 }
 
-/* Explosion overlay */
+/* Explosion overlay - used for time-out/forfeit (amber) and success (green) */
 .bomb-explosion-overlay {
   position: fixed;
   inset: 0;
@@ -588,20 +588,45 @@ body.dark-mode .table tr.table-success a {
   background: rgba(255, 200, 120, 0.9);
 }
 
+.bomb-explosion-overlay.flash.success-flash {
+  background: rgba(60, 195, 140, 0.94);
+}
+
+.bomb-explosion-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transform: scale(0.3);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.bomb-explosion-overlay.flash .bomb-explosion-content {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .bomb-explosion-text {
   font-family: 'Courier New', monospace;
   font-size: 4rem;
   font-weight: 900;
   color: #1a1a1a;
   text-shadow: 0 0 20px rgba(255,150,0,0.8);
-  opacity: 0;
-  transform: scale(0.3);
-  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-.bomb-explosion-overlay.flash .bomb-explosion-text {
-  opacity: 1;
-  transform: scale(1);
+.success-flash .bomb-explosion-text {
+  text-shadow: 0 0 20px rgba(40,180,110,0.8);
+}
+
+.bomb-explosion-subtext {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #143d2a;
+  text-transform: uppercase;
+  opacity: 0.85;
 }
 
 .bomb-shockwave {
@@ -613,6 +638,10 @@ body.dark-mode .table tr.table-success a {
   transform: translate(-50%, -50%) scale(0);
 }
 
+.bomb-shockwave.success-shockwave {
+  background: radial-gradient(circle, rgba(200,255,225,1) 0%, rgba(40,180,110,0.7) 40%, rgba(40,180,110,0) 70%);
+}
+
 .bomb-shockwave.go {
   animation: shockwaveGrow 0.7s ease-out forwards;
 }
@@ -620,6 +649,37 @@ body.dark-mode .table tr.table-success a {
 @keyframes shockwaveGrow {
   0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(60); opacity: 0; }
+}
+
+/* Sleek particle burst for the success state - clean geometric bars, not confetti/emoji */
+.bomb-spark-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.bomb-spark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  transform-origin: center;
+  animation: sparkFly 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes sparkFly {
+  0% {
+    transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) rotate(var(--rot, 0deg)) scale(0.4);
+    opacity: 0;
+  }
 }
 
 @media (max-width: 768px) {
@@ -631,5 +691,8 @@ body.dark-mode .table tr.table-success a {
   }
   .bomb-widget-time {
     font-size: 1.6rem;
+  }
+  .bomb-explosion-text {
+    font-size: 2.6rem;
   }
 }

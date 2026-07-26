@@ -3,7 +3,14 @@
 {% block content %}
 
 {% if object.has_time_bomb and form.instance.value != form.instance.task.correct and not user.is_superuser %}
-<div class="bomb-widget" id="bomb-widget" data-duration="{{ object.bomb_duration }}" data-task-id="{{ object.id }}" data-detonate-url="{% url 'bomb-detonate' object.id %}" data-tasklist-url="{% url 'task-list' %}">
+<div class="bomb-widget" id="bomb-widget"
+     data-duration="{{ object.bomb_duration }}"
+     data-remaining="{{ bomb_remaining }}"
+     data-first-open="{{ bomb_is_first_open|yesno:'true,false' }}"
+     data-task-id="{{ object.id }}"
+     data-detonate-url="{% url 'bomb-detonate' object.id %}"
+     data-verify-url="{% url 'bomb-verify-open' object.id %}"
+     data-tasklist-url="{% url 'task-list' %}">
   <div class="bomb-widget-header">
     <svg class="bomb-widget-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="14" r="7" fill="#3a3f4f"/>
@@ -19,7 +26,11 @@
 </div>
 <div class="bomb-explosion-overlay" id="bomb-explosion-overlay">
   <div class="bomb-shockwave" id="bomb-shockwave"></div>
-  <div class="bomb-explosion-text">💥 BOOM!</div>
+  <div class="bomb-spark-container" id="bomb-spark-container"></div>
+  <div class="bomb-explosion-content">
+    <div class="bomb-explosion-text" id="bomb-explosion-text">Time's Up</div>
+    <div class="bomb-explosion-subtext" id="bomb-explosion-subtext"></div>
+  </div>
 </div>
 {% endif %}
 
@@ -93,9 +104,9 @@
 </div>
 
 <script>
-  // Celebration animation function
+  // Celebration animation function (used for non-bomb questions only)
   function triggerCelebration() {
-    const emojis = ["🎉", "🎊", "🙌", "🎈", "🎀", "🥳", "🎖️"];
+    const emojis = ["🎉", "🎊"];
     const celebrationContainer = document.createElement('div');
     celebrationContainer.className = 'celebration-container';
     celebrationContainer.style.position = 'fixed';
@@ -137,6 +148,15 @@
     return null;
   }
 
+  function isPageReload() {
+    try {
+      const entries = performance.getEntriesByType('navigation');
+      if (entries.length) return entries[0].type === 'reload';
+      if (performance.navigation) return performance.navigation.type === 1;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     const bombWidget = document.getElementById('bomb-widget');
     let bombInterval = null;
@@ -151,16 +171,25 @@
       }
     }
 
+    // No-op unless this task actually has a bomb (reassigned below if so)
+    let triggerBombSuccess = function () {};
+
     if (bombWidget) {
       const duration = parseInt(bombWidget.dataset.duration, 10) || 60;
       const detonateUrl = bombWidget.dataset.detonateUrl;
+      const verifyUrl = bombWidget.dataset.verifyUrl;
       const taskListUrl = bombWidget.dataset.tasklistUrl;
+      const isFirstOpen = bombWidget.dataset.firstOpen === 'true';
       const timeEl = document.getElementById('bomb-widget-time');
       const barEl = document.getElementById('bomb-widget-bar');
       const overlay = document.getElementById('bomb-explosion-overlay');
+      const overlayText = document.getElementById('bomb-explosion-text');
+      const overlaySubtext = document.getElementById('bomb-explosion-subtext');
       const shockwave = document.getElementById('bomb-shockwave');
+      const sparkContainer = document.getElementById('bomb-spark-container');
 
-      let remaining = duration;
+      let remaining = parseInt(bombWidget.dataset.remaining, 10);
+      if (isNaN(remaining)) remaining = duration;
       let detonated = false;
 
       function render() {
@@ -178,13 +207,54 @@
         }
       }
 
+      function spawnSparks() {
+        sparkContainer.innerHTML = '';
+        const colors = ['#c9fbe1', '#3fcf78', '#ffffff'];
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+          const el = document.createElement('div');
+          el.className = 'bomb-spark';
+          const angle = (Math.PI * 2 * i / count) + (Math.random() * 0.4 - 0.2);
+          const dist = 90 + Math.random() * 50;
+          el.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+          el.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+          el.style.setProperty('--rot', (angle * 180 / Math.PI) + 'deg');
+          el.style.background = colors[i % colors.length];
+          el.style.animationDelay = (Math.random() * 0.08) + 's';
+          sparkContainer.appendChild(el);
+        }
+        setTimeout(() => { sparkContainer.innerHTML = ''; }, 1300);
+      }
+
+      function showOverlayAndLeave(text, delayMs) {
+        overlaySubtext.textContent = '';
+        overlayText.textContent = text;
+        overlay.classList.remove('success-flash');
+        shockwave.classList.remove('success-shockwave');
+        overlay.classList.add('flash');
+        shockwave.classList.add('go');
+        setTimeout(() => {
+          window.location.href = taskListUrl;
+        }, delayMs);
+      }
+
+      triggerBombSuccess = function () {
+        overlayText.textContent = 'Congratulations!';
+        overlaySubtext.textContent = '+15 Bonus';
+        overlay.classList.add('flash', 'success-flash');
+        shockwave.classList.add('go', 'success-shockwave');
+        spawnSparks();
+        setTimeout(() => {
+          overlay.classList.remove('flash', 'success-flash');
+          shockwave.classList.remove('go', 'success-shockwave');
+        }, 2400);
+      };
+
       function detonate() {
         if (detonated) return;
         detonated = true;
 
-        // Explosion visuals
-        overlay.classList.add('flash');
-        shockwave.classList.add('go');
+        showOverlayAndLeave("Time's Up", 1600);
 
         // Notify server so the question is forfeited even if the user closes the tab
         fetch(detonateUrl, {
@@ -193,26 +263,58 @@
             'X-CSRFToken': getCookie('csrftoken'),
             'X-Requested-With': 'XMLHttpRequest'
           }
-        }).finally(() => {
-          setTimeout(() => {
-            window.location.href = taskListUrl;
-          }, 1600);
         });
       }
 
-      render();
-      bombInterval = setInterval(() => {
-        remaining -= 1;
-        if (remaining <= 0) {
-          remaining = 0;
-          render();
-          clearInterval(bombInterval);
-          bombInterval = null;
-          detonate();
-        } else {
-          render();
-        }
-      }, 1000);
+      function startCountdown() {
+        render();
+        bombInterval = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            remaining = 0;
+            render();
+            clearInterval(bombInterval);
+            bombInterval = null;
+            detonate();
+          } else {
+            render();
+          }
+        }, 1000);
+      }
+
+      if (isFirstOpen) {
+        // Genuinely opening this question for the first time - always safe
+        startCountdown();
+      } else {
+        // Returning to a question that was already activated. Only a reload
+        // or coming back from this question's own hint page is a safe
+        // continuation - anything else means they left, and it's forfeited.
+        fetch(verifyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            is_reload: isPageReload(),
+            referrer: document.referrer || ''
+          })
+        })
+          .then(resp => resp.json())
+          .then(data => {
+            if (data.status === 'locked') {
+              detonated = true;
+              showOverlayAndLeave('Forfeited', 1600);
+            } else {
+              startCountdown();
+            }
+          })
+          .catch(() => {
+            // If the check itself fails, don't lock someone out unfairly
+            startCountdown();
+          });
+      }
     }
 
       const form = document.getElementById('answer-form');
@@ -230,10 +332,16 @@
               successMessage.style.display = 'block';
 
               // Defuse the bomb immediately so it can't detonate during the celebration delay
+              const hadBomb = !!bombWidget;
               stopBombTimer();
 
-              // Trigger celebration animation
-              triggerCelebration();
+              if (hadBomb) {
+                // Sleek full-screen "Defused" overlay for bomb questions
+                triggerBombSuccess();
+              } else {
+                // Regular celebration animation, unchanged for non-bomb questions
+                triggerCelebration();
+              }
 
               // Delay form submission to let users enjoy the celebration
               setTimeout(() => {

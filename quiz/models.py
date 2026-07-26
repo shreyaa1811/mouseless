@@ -1,4 +1,3 @@
-from email.policy import default
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import F, Sum, Max
@@ -84,9 +83,10 @@ class Card(models.Model):
         mouseless_score = self.answer_set.filter(value=F('task__correct'), task__question_type='mouseless').aggregate(score=Sum('task__points')).get('score') or 0
         keyboardless_score = self.answer_set.filter(value=F('task__correct'), task__question_type='keyboardless').aggregate(score=Sum('task__points')).get('score') or 0
         
-        # Calculate total hint penalties from both phases
-        total_hints = Hint.objects.filter(user=self.user).count()
-        total_penalty = total_hints * 2  # 2 points penalty per hint
+        # Calculate total hint penalties from both phases using each task's configured cost
+        total_penalty = Hint.objects.filter(user=self.user).aggregate(
+            penalty=Sum('hint_task__hint_points')
+        ).get('penalty') or 0
         
         total_score = mouseless_score + keyboardless_score - total_penalty
         return max(0, total_score)
@@ -102,9 +102,10 @@ class Card(models.Model):
     def update_mouseless_score(self):
         """Update the saved mouseless score when switching to keyboardless phase"""
         score = self.answer_set.filter(value=F('task__correct'), task__question_type='mouseless').aggregate(score=Sum('task__points')).get('score') or 0
-        # Subtract hint penalties for mouseless phase
-        mouseless_hints = Hint.objects.filter(user=self.user, hint_task__question_type='mouseless').count()
-        penalty = mouseless_hints * 2  # 2 points penalty per hint
+        # Subtract hint penalties for mouseless phase using each task's configured cost
+        penalty = Hint.objects.filter(user=self.user, hint_task__question_type='mouseless').aggregate(
+            penalty=Sum('hint_task__hint_points')
+        ).get('penalty') or 0
         self.mouseless_score = max(0, score - penalty)  # Ensure score doesn't go below 0
         self.save()
         return self.mouseless_score
@@ -112,9 +113,10 @@ class Card(models.Model):
     def update_keyboardless_score(self):
         """Update the saved keyboardless score when challenge is complete"""
         score = self.answer_set.filter(value=F('task__correct'), task__question_type='keyboardless').aggregate(score=Sum('task__points')).get('score') or 0
-        # Subtract hint penalties for keyboardless phase
-        keyboardless_hints = Hint.objects.filter(user=self.user, hint_task__question_type='keyboardless').count()
-        penalty = keyboardless_hints * 2  # 2 points penalty per hint
+        # Subtract hint penalties for keyboardless phase using each task's configured cost
+        penalty = Hint.objects.filter(user=self.user, hint_task__question_type='keyboardless').aggregate(
+            penalty=Sum('hint_task__hint_points')
+        ).get('penalty') or 0
         self.keyboardless_score = max(0, score - penalty)  # Ensure score doesn't go below 0
         self.save()
         return self.keyboardless_score
@@ -125,7 +127,7 @@ class Card(models.Model):
         if last_time is None:
             return None
 
-        return str(last_time - self.start)
+        return last_time - self.start
 
 class Answer(models.Model):
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
@@ -133,6 +135,7 @@ class Answer(models.Model):
     value = models.CharField(max_length=256)
     submit = models.DateTimeField(auto_now=True)
     time_submitted = models.DateTimeField(auto_now=True)
+    bomb_started_at = models.DateTimeField(null=True, blank=True, help_text='When the time bomb was first activated for this user on this question')
 
     class Meta:
         unique_together = (('card', 'task'),)

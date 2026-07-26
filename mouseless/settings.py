@@ -199,8 +199,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # In production mode
 # When using command collectstatic.py , comment out STATICFILES_DIRS... It looks like:
 
-# #STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)
-# STATIC_ROOT=os.path.join(BASE_DIR,"/static/")
+STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)
+STATIC_ROOT=os.path.join(BASE_DIR,"/static/")
 # And after that comment out STATIC_ROOT, so that it looks like:
 
 # STATICFILES_DIRS = (os.path.join(BASE_DIR, "static"),)

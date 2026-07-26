@@ -1,3 +1,5 @@
+import json
+import math
 from django.shortcuts import render, redirect, reverse
 from django.contrib import messages
 from django.urls import reverse_lazy
@@ -9,6 +11,7 @@ from django.views.generic import (
 )
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.utils import timezone
 from .forms import UserRegisterForm, AnswerForm
 from .models import Task, Card, Answer, Hint, SiteSetting, BombForfeit
 from django.views.generic.edit import FormMixin
@@ -64,6 +67,7 @@ class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
                 # When switching to keyboardless, save mouseless score
                 card.update_mouseless_score()
                 card.penalty_points = 0  # Reset penalties for new phase
+            card.start = timezone.now()
             card.phase = current_mode
             card.save()
 
@@ -108,13 +112,34 @@ class TaskDetailView(LoginRequiredMixin, UserPassesTestMixin, FormMixin, DetailV
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        task = self.object
 
-        if not request.user.is_superuser and self.object.is_forfeited(request.user):
-            messages.warning(request, f'💥 "{self.object.name}" already blew up on you — it\'s off the table now.')
+        if not request.user.is_superuser and task.is_forfeited(request.user):
+            messages.warning(request, f'"{task.name}" is no longer available — it was forfeited.')
             return redirect('task-list')
 
         card = self.request.user.card
-        answer , _ = Answer.objects.get_or_create(card=card, task=self.object)
+        answer , _ = Answer.objects.get_or_create(card=card, task=task)
+
+        # What's actually being submitted right now, if anything (empty on a plain page load)
+        submitted_value = request.POST.get('value', '').strip()
+        is_correct_submission = submitted_value != '' and submitted_value == task.correct
+
+        self._bomb_is_first_open = False
+        if not request.user.is_superuser and task.has_time_bomb and answer.value != task.correct and not is_correct_submission:
+            now = timezone.now()
+            if answer.bomb_started_at is None:
+                # First time this user has opened this question - start the fuse now
+                answer.bomb_started_at = now
+                answer.save(update_fields=['bomb_started_at'])
+                self._bomb_is_first_open = True
+            elapsed = (now - answer.bomb_started_at).total_seconds()
+            if elapsed >= task.bomb_duration:
+                # Time ran out while they were away (e.g. on the hint page) - it still counts
+                BombForfeit.objects.get_or_create(user=request.user, task=task)
+                messages.warning(request, f'Time ran out on "{task.name}" while you were away — it has been forfeited.')
+                return redirect('task-list')
+
         form = AnswerForm(request.POST, instance=answer)
         if form.is_valid():
             return self.form_valid(form)
@@ -124,9 +149,21 @@ class TaskDetailView(LoginRequiredMixin, UserPassesTestMixin, FormMixin, DetailV
 
     def get_context_data(self, **kwargs):
         context = super(TaskDetailView, self).get_context_data(**kwargs)
+        task = self.object
         card = self.request.user.card
-        answer , _ = Answer.objects.get_or_create(card=card, task=self.object)
+        answer , _ = Answer.objects.get_or_create(card=card, task=task)
         context['form'] = AnswerForm(instance=answer)
+
+        if not self.request.user.is_superuser and task.has_time_bomb and answer.value != task.correct:
+            if answer.bomb_started_at:
+                elapsed = (timezone.now() - answer.bomb_started_at).total_seconds()
+                context['bomb_remaining'] = max(0, math.ceil(task.bomb_duration - elapsed))
+            else:
+                context['bomb_remaining'] = task.bomb_duration
+            # Safe default of True: if this flag can't be determined for some reason,
+            # we'd rather skip the leave-check than wrongly lock out a legitimate first view.
+            context['bomb_is_first_open'] = getattr(self, '_bomb_is_first_open', True)
+
         return context
 
     def form_invalid(self, form):
@@ -195,6 +232,60 @@ def bombDetonate(request, pk):
 
     BombForfeit.objects.get_or_create(user=request.user, task=task)
     return JsonResponse({'status': 'forfeited'})
+
+@login_required(login_url='login')
+@require_POST
+def cursorlessSolved(request, pk):
+    task = Task.objects.get(id=pk)
+    return JsonResponse({'answer': task.correct})
+
+@login_required(login_url='login')
+@require_POST
+def bombVerifyOpen(request, pk):
+    """
+    Called by the client right after a bomb-question page loads (except on the
+    very first legitimate open). Confirms whether this view is a safe
+    continuation (a reload, or arriving from this task's own hint page) or
+    whether the participant left the question and is trying to reopen it -
+    in which case it is permanently forfeited, matching a normal detonation.
+    """
+    task = Task.objects.get(id=pk)
+
+    if request.user.is_superuser or not task.has_time_bomb:
+        return JsonResponse({'status': 'ok'})
+
+    try:
+        answer = Answer.objects.get(card__user=request.user, task=task)
+    except Answer.DoesNotExist:
+        return JsonResponse({'status': 'ok'})
+
+    if answer.value == task.correct:
+        return JsonResponse({'status': 'ok'})
+
+    if BombForfeit.objects.filter(user=request.user, task=task).exists():
+        return JsonResponse({'status': 'locked'})
+
+    if answer.bomb_started_at is None:
+        return JsonResponse({'status': 'ok'})
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except (ValueError, UnicodeDecodeError):
+        payload = {}
+
+    is_reload = bool(payload.get('is_reload'))
+    referrer = payload.get('referrer') or ''
+
+    hint_path = reverse('show-hint', kwargs={'pk': pk})
+    self_path = reverse('task-detail', kwargs={'pk': pk})
+
+    safe = is_reload or (hint_path in referrer) or (self_path in referrer)
+
+    if safe:
+        return JsonResponse({'status': 'ok'})
+
+    BombForfeit.objects.get_or_create(user=request.user, task=task)
+    return JsonResponse({'status': 'locked'})
 
 def get_dark_mode_setting():
     setting = SiteSetting.objects.first()

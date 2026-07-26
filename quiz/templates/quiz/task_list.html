@@ -19,12 +19,12 @@
                         </tr>
                         {% elif task.forfeited %}
                         <tr class="table-danger">
-                            <td><span class="article-title text-muted"><s>{{ task.name }}</s> <small>💥 missed</small></span></td>
+                            <td><span class="article-title text-muted"><s>{{ task.name }}</s></span> <span class="badge badge-secondary" style="letter-spacing:0.04em;">MISSED</span></td>
                             <td class="text-muted">{{ task.points }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td><a class="article-title" href="{% url 'task-detail' task.id %}">{{ task.name }}{% if task.has_time_bomb %} <small class="text-muted">⏱️</small>{% endif %}</a></td>
+                            <td><a class="article-title" href="{% url 'task-detail' task.id %}">{{ task.name }}</a></td>
                             <td>{{ task.points }}</td>
                         </tr>
                         {% endif %}
@@ -40,20 +40,19 @@
                     <div class="p-1 bd-highlight">User</div>
                     <div class="p-1 bd-highlight text-success">{{card.user.username}}</div>
                 </div>
+                {% if current_phase == 'mouseless' %}
                 <div class="d-flex justify-content-between">
-                    <div class="p-1 bd-highlight">Current Phase Score</div>
-                    <div class="p-1 bd-highlight text-success">{{ card.current_phase_score }}</div>
+                    <div class="p-1 bd-highlight">Mouseless Score</div>
+                    <div class="p-1 bd-highlight text-info">{{ card.current_phase_score }}</div>
                 </div>
-                {% if card.mouseless_score > 0 %}
+                {% else %}
                 <div class="d-flex justify-content-between">
                     <div class="p-1 bd-highlight">Mouseless Score</div>
                     <div class="p-1 bd-highlight text-info">{{ card.mouseless_score }}</div>
                 </div>
-                {% endif %}
-                {% if current_phase == 'keyboardless' %}
                 <div class="d-flex justify-content-between">
-                    <div class="p-1 bd-highlight">Total Score</div>
-                    <div class="p-1 bd-highlight text-primary">{{ card.score }}</div>
+                    <div class="p-1 bd-highlight">Keyboardless Score</div>
+                    <div class="p-1 bd-highlight text-primary">{{ card.current_phase_score }}</div>
                 </div>
                 {% endif %}
                 {% if card.current_phase_score > 0 %}
