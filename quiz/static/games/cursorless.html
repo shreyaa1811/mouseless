@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CURSORLESS // Keyboardless Bonus Round</title>
+<title>Welcome to CURSORLESS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -265,9 +265,9 @@
 
 <!-- INTRO -->
 <div id="intro">
-  <div class="eyebrow">Keyboardless — Bonus Objective</div>
+  <div class="eyebrow">Welcome to </div>
   <h1>CURSOR<span>LESS</span></h1>
-  <p class="sub">Your mouse still moves. Your <b>cursor</b> won't be visible. Memorise a short click sequence, then find those buttons again in the dark — purely by feel, hover glow, and blind faith. Miss once and everything resets <b>and</b> rearranges itself.</p>
+  <p class="sub">Your mouse still moves. Your <b>cursor</b> won't be visible. Memorise a short click sequence, then find those buttons again in the dark. Miss once and everything resets <b>and</b> rearranges itself.</p>
   <button class="cta" id="startBtn">Reveal the Pattern</button>
 </div>
 
@@ -302,13 +302,9 @@
    ============================================================ */
 const SEQUENCE_LENGTH = 7;                       // how many buttons in the pattern (out of 10)
 
-// Answer source:
-// - If this page was opened with ?verify=<url> (Django wires this in), the real
-//   answer is fetched from that endpoint ONLY after a real solve — it never
-//   sits anywhere in this page's source.
-// - If opened standalone (no ?verify= param, e.g. for local testing), it falls
-//   back to these local fragments so you can still preview the page on its own.
-const ANSWER_FRAGMENTS = ["GH", "OST1N", "-TH3-", "M4CH1N3"]; // fallback only — edit for standalone testing
+// Answer source: the real answer is fetched from the Django verify endpoint
+// (passed in via ?verify=<url>) ONLY after a real solve. Nothing resembling
+// an answer is ever stored in this file — there's nothing to find via Inspect.
 const VERIFY_URL = new URLSearchParams(window.location.search).get('verify');
 
 function getCookie(name){
@@ -320,7 +316,7 @@ function getCookie(name){
 
 async function getAnswer(){
   if(!VERIFY_URL){
-    return ANSWER_FRAGMENTS.join(''); // standalone/testing fallback
+    return 'No verify URL — open this via the actual task link, not standalone.';
   }
   try{
     const resp = await fetch(VERIFY_URL, {
