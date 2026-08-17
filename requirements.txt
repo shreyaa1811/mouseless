@@ -42,3 +42,4 @@ tzdata==2022.2
 urllib3==2.2.2
 whitenoise==5.0.1
 zipp==3.8.1
+mysqlclient==2.2.4

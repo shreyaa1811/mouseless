@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to CURSORLESS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #131126;
+    --bg2: #1b1834;
+    --panel: #1f1c3a;
+    --line: #34305c;
+    --lime: #cbff3d;
+    --pink: #ff3e7f;
+    --text: #ece9ff;
+    --muted: #8b86b3;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(203,255,61,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,62,127,0.08), transparent 45%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    overflow: hidden;
+    position: relative;
+  }
+  /* faint grain/scanline texture so it doesn't read as a flat AI gradient page */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+    z-index: 999;
+    mix-blend-mode: overlay;
+  }
+  .cursorless{ cursor: none !important; }
+  .cursorless *{ cursor: none !important; }
+
+  h1,h2,.display{ font-family:'Space Grotesk', sans-serif; }
+
+  /* ===== Intro screen ===== */
+  #intro{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    padding: 32px;
+    z-index: 20;
+    transition: opacity .5s ease;
+  }
+  .eyebrow{
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    font-size: 12px;
+    color: var(--lime);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+  #intro h1{
+    font-size: clamp(40px, 8vw, 84px);
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+    line-height: .95;
+  }
+  #intro h1 span{ color: var(--pink); }
+  .sub{
+    color: var(--muted);
+    max-width: 480px;
+    line-height: 1.6;
+    font-size: 14px;
+    margin: 18px 0 34px;
+  }
+  .sub b{ color: var(--text); }
+  button.cta{
+    background: var(--lime);
+    color: #14121f;
+    border: none;
+    padding: 16px 34px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: .04em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+    box-shadow: 0 0 0 rgba(203,255,61,0);
+  }
+  button.cta:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(203,255,61,0.25); }
+  button.cta:active{ transform: translateY(0px) scale(.98); }
+
+  /* ===== Reveal (memorize) screen ===== */
+  #reveal{
+    position:fixed; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    z-index: 20;
+    text-align:center;
+  }
+  #reveal{ background: rgba(19,17,38,.97); }
+  #reveal .eyebrow{ color: var(--pink); }
+  #pattern{
+    font-size: clamp(38px, 9vw, 90px);
+    font-weight: 700;
+    letter-spacing: .04em;
+    display:flex; gap: 18px; align-items:center;
+    margin: 10px 0 26px;
+  }
+  #pattern .arrow{ color: var(--muted); font-size: .5em; }
+  #pattern .num{
+    color: var(--lime);
+    text-shadow: 0 0 24px rgba(203,255,61,.35);
+  }
+  #timerBar{
+    width: 220px; height: 4px; background: var(--line); border-radius: 2px; overflow:hidden;
+  }
+  #timerFill{ height:100%; width:100%; background: var(--pink); transform-origin: left; }
+
+  /* ===== Game stage ===== */
+  #stage{
+    position:fixed; inset:0;
+    display:none;
+    z-index: 10;
+  }
+  #hud{
+    position:fixed; top: 22px; left: 50%; transform: translateX(-50%);
+    display:flex; gap: 10px; align-items:center;
+    z-index: 15;
+  }
+  .dot{
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid var(--line);
+    background: transparent;
+    transition: all .2s ease;
+  }
+  .dot.filled{
+    background: var(--lime);
+    border-color: var(--lime);
+    box-shadow: 0 0 12px rgba(203,255,61,.6);
+  }
+  #taunt{
+    position: fixed; top: 56px; left:50%; transform: translateX(-50%);
+    font-size: 12px; color: var(--pink);
+    opacity: 0; transition: opacity .25s ease;
+    letter-spacing: .03em;
+    z-index: 15;
+    white-space: nowrap;
+  }
+  #taunt.show{ opacity: 1; }
+
+  .btn{
+    position:absolute;
+    width: 48px; height: 48px;
+    border-radius: 8px;
+    border: 2px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    display:flex; align-items:center; justify-content:center;
+    transition: top .55s cubic-bezier(.2,.9,.3,1.2), left .55s cubic-bezier(.2,.9,.3,1.2),
+                background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+    user-select:none;
+  }
+  .btn:hover{
+    border-color: #4a4670;
+    box-shadow: 0 0 0 3px rgba(203,255,61,.05);
+  }
+  .btn.correct-flash{
+    background: var(--lime);
+    color: #14121f;
+    border-color: var(--lime);
+  }
+  #stage.shake{ animation: shake .4s ease; }
+  @keyframes shake{
+    10%,90%{ transform: translateX(-2px); }
+    20%,80%{ transform: translateX(4px); }
+    30%,50%,70%{ transform: translateX(-8px); }
+    40%,60%{ transform: translateX(8px); }
+  }
+  .flashred{
+    position:fixed; inset:0; background: var(--pink);
+    opacity: 0; pointer-events:none; z-index: 30;
+    transition: opacity .08s ease;
+  }
+  .flashred.on{ opacity: .18; }
+
+  /* ===== Win screen ===== */
+  #win{
+    position:fixed; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    z-index: 40;
+    background: rgba(19,17,38,.96);
+  }
+  #answerBox{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: clamp(26px, 6vw, 52px);
+    font-weight: 700;
+    color: var(--lime);
+    letter-spacing: .06em;
+    background: var(--panel);
+    border: 2px dashed var(--line);
+    padding: 20px 36px;
+    border-radius: 8px;
+    margin: 22px 0;
+  }
+  .hint{ color: var(--muted); font-size: 13px; }
+  #copyBtn{
+    margin-top: 18px;
+    background: transparent;
+    border: 2px solid var(--lime);
+    color: var(--lime);
+    padding: 10px 24px;
+    border-radius: 3px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #copyBtn:hover{ background: var(--lime); color: #14121f; }
+
+  #replayBtn{
+    position: fixed; bottom: 54px; left: 50%; transform: translateX(-50%);
+    background: var(--panel);
+    border: 1.5px solid var(--line);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: .03em;
+    z-index: 15;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    transition: border-color .15s ease, color .15s ease;
+  }
+  #replayBtn:hover{ border-color: var(--pink); color: var(--pink); }
+  #replayBtn:disabled{ opacity: .4; cursor: default; pointer-events: none; }
+  #replayBtn .ic{ font-size: 13px; }
+
+  footer{
+    position:fixed; bottom: 12px; left: 50%; transform:translateX(-50%);
+    font-size: 10px; color: var(--line); letter-spacing:.05em;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+
+<div class="flashred" id="flashred"></div>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="eyebrow">Welcome to </div>
+  <h1>CURSOR<span>LESS</span></h1>
+  <p class="sub">Your mouse still moves. Your <b>cursor</b> won't be visible. Memorise a short click sequence, then find those buttons again in the dark. Miss once and everything resets <b>and</b> rearranges itself.</p>
+  <button class="cta" id="startBtn">Reveal the Pattern</button>
+</div>
+
+<!-- PATTERN REVEAL -->
+<div id="reveal">
+  <div class="eyebrow">Memorise this. It's disappearing.</div>
+  <div id="pattern"></div>
+  <div id="timerBar"><div id="timerFill"></div></div>
+</div>
+
+<!-- GAME STAGE -->
+<div id="stage">
+  <div id="hud"></div>
+  <div id="taunt"></div>
+  <button id="replayBtn"><span class="ic">&#8635;</span> Replay sequence <span style="color:var(--pink)">— resets progress &amp; reshuffles</span></button>
+</div>
+
+<!-- WIN -->
+<div id="win">
+  <div class="eyebrow" style="color:var(--lime)">Sequence complete</div>
+  <h2 class="display" style="margin:6px 0 0;font-size:22px;">Here's your answer string</h2>
+  <div id="answerBox"></div>
+  <div class="hint">Type this exactly into the main quiz to score the round.</div>
+  <button id="copyBtn">Copy answer</button>
+</div>
+
+<footer>keyboardless × cursorless — good luck, you'll need it</footer>
+
+<script>
+/* ============================================================
+   EDIT THESE TWO LINES FOR YOUR EVENT
+   ============================================================ */
+const SEQUENCE_LENGTH = 7;                       // how many buttons in the pattern (out of 10)
+
+// Answer source: the real answer is fetched from the Django verify endpoint
+// (passed in via ?verify=<url>) ONLY after a real solve. Nothing resembling
+// an answer is ever stored in this file — there's nothing to find via Inspect.
+const VERIFY_URL = new URLSearchParams(window.location.search).get('verify');
+
+function getCookie(name){
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if(parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
+async function getAnswer(){
+  if(!VERIFY_URL){
+    return 'No verify URL — open this via the actual task link, not standalone.';
+  }
+  try{
+    const resp = await fetch(VERIFY_URL, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const data = await resp.json();
+    return data.answer;
+  } catch(err){
+    return 'ERROR — could not reach server, refresh and try again';
+  }
+}
+/* ============================================================ */
+
+const TOTAL_BUTTONS = 14;
+const MEMORIZE_SECONDS = 5;
+const REPLAY_SECONDS = 4;   // shorter re-showing of the pattern — a peek, not a full re-study
+
+const taunts = [
+  "Nope. The void laughs at you.",
+  "Wrong. The floor just moved.",
+  "Cold. Colder. Still wrong.",
+  "That button was a decoy the whole time.",
+  "Your hand betrayed you.",
+  "Reshuffling out of spite.",
+  "Incorrect. Try feeling around more.",
+  "The trapdoor ate your progress."
+];
+
+let sequence = [];
+let progress = 0;
+let positions = [];
+
+const introEl = document.getElementById('intro');
+const revealEl = document.getElementById('reveal');
+const stageEl = document.getElementById('stage');
+const winEl = document.getElementById('win');
+const hudEl = document.getElementById('hud');
+const tauntEl = document.getElementById('taunt');
+const flashEl = document.getElementById('flashred');
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildSequence(){
+  const nums = shuffle([...Array(TOTAL_BUTTONS).keys()].map(n => n + 1));
+  sequence = nums.slice(0, SEQUENCE_LENGTH);
+}
+
+// rectangular zones (in vw/vh %) that buttons must never spawn inside
+const exclusionZones = [
+  { x1: 30, x2: 70, y1: 0,  y2: 13 },   // top HUD / taunt strip
+  { x1: 28, x2: 72, y1: 84, y2: 100 }   // bottom replay button
+];
+
+function insideExclusion(x, y){
+  return exclusionZones.some(z => x >= z.x1 && x <= z.x2 && y >= z.y1 && y <= z.y2);
+}
+
+// generate scattered non-grid positions with a minimum distance apart
+function randomPositions(){
+  const pts = [];
+  const marginX = 6, marginY = 6;
+  let attempts = 0;
+  while(pts.length < TOTAL_BUTTONS && attempts < 8000){
+    attempts++;
+    const x = marginX + Math.random() * (100 - marginX * 2);
+    const y = marginY + Math.random() * (100 - marginY * 2);
+    if(insideExclusion(x, y)) continue;
+    const tooClose = pts.some(p => Math.hypot(p.x - x, p.y - y) < 11);
+    if(!tooClose) pts.push({x, y});
+  }
+  while(pts.length < TOTAL_BUTTONS){
+    let x, y, tries = 0;
+    do{
+      x = marginX + Math.random() * (100 - marginX*2);
+      y = marginY + Math.random() * (100 - marginY*2);
+      tries++;
+    } while(insideExclusion(x, y) && tries < 200);
+    pts.push({ x, y });
+  }
+  return shuffle(pts);
+}
+
+function layoutButtons(animate){
+  positions = randomPositions();
+  const btns = document.querySelectorAll('.btn');
+  btns.forEach((btn, i) => {
+    btn.style.left = `calc(${positions[i].x}vw - 24px)`;
+    btn.style.top = `calc(${positions[i].y}vh - 24px)`;
+  });
+}
+
+function buildStage(){
+  stageEl.querySelectorAll('.btn').forEach(b => b.remove());
+  const order = shuffle([...Array(TOTAL_BUTTONS).keys()].map(n => n + 1));
+  order.forEach(n => {
+    const b = document.createElement('div');
+    b.className = 'btn';
+    b.textContent = n;
+    b.dataset.num = n;
+    b.addEventListener('click', () => onButtonClick(n, b));
+    stageEl.appendChild(b);
+  });
+  layoutButtons(false);
+}
+
+function buildHud(){
+  hudEl.innerHTML = '';
+  for(let i = 0; i < SEQUENCE_LENGTH; i++){
+    const d = document.createElement('div');
+    d.className = 'dot';
+    hudEl.appendChild(d);
+  }
+}
+
+function updateHud(){
+  const dots = hudEl.querySelectorAll('.dot');
+  dots.forEach((d, i) => d.classList.toggle('filled', i < progress));
+}
+
+function onButtonClick(n, el){
+  if(n === sequence[progress]){
+    progress++;
+    el.classList.add('correct-flash');
+    setTimeout(() => el.classList.remove('correct-flash'), 200);
+    updateHud();
+    if(progress === SEQUENCE_LENGTH){
+      setTimeout(showWin, 350);
+    }
+  } else {
+    progress = 0;
+    updateHud();
+    showTaunt();
+    flashRed();
+    stageEl.classList.remove('shake'); void stageEl.offsetWidth; stageEl.classList.add('shake');
+    layoutButtons(true);
+  }
+}
+
+function showTaunt(){
+  tauntEl.textContent = taunts[Math.floor(Math.random() * taunts.length)];
+  tauntEl.classList.add('show');
+  clearTimeout(showTaunt._t);
+  showTaunt._t = setTimeout(() => tauntEl.classList.remove('show'), 1100);
+}
+
+function flashRed(){
+  flashEl.classList.add('on');
+  setTimeout(() => flashEl.classList.remove('on'), 120);
+}
+
+let cachedAnswer = null;
+
+async function showWin(){
+  document.body.classList.remove('cursorless');
+  stageEl.style.display = 'none';
+  hudEl.style.display = 'none';
+  replayBtn.style.display = 'none';
+  winEl.style.display = 'flex';
+
+  const box = document.getElementById('answerBox');
+  box.textContent = 'Fetching…';
+  cachedAnswer = await getAnswer();
+  box.textContent = cachedAnswer;
+}
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  if(!cachedAnswer) return;
+  navigator.clipboard.writeText(cachedAnswer).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const old = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = old, 1400);
+  });
+});
+
+function showPattern(seconds, onDone){
+  revealEl.style.display = 'flex';
+
+  const patternEl = document.getElementById('pattern');
+  patternEl.innerHTML = sequence.map((n, i) =>
+    (i > 0 ? '<span class="arrow">&rarr;</span>' : '') + `<span class="num">${n}</span>`
+  ).join('');
+
+  const fill = document.getElementById('timerFill');
+  fill.style.transition = 'none';
+  fill.style.transform = 'scaleX(1)';
+  requestAnimationFrame(() => {
+    fill.style.transition = `transform ${seconds}s linear`;
+    fill.style.transform = 'scaleX(0)';
+  });
+
+  setTimeout(() => {
+    revealEl.style.display = 'none';
+    if(onDone) onDone();
+  }, seconds * 1000);
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  buildSequence();
+  introEl.style.display = 'none';
+
+  showPattern(MEMORIZE_SECONDS, () => {
+    stageEl.style.display = 'block';
+    document.body.classList.add('cursorless');
+    document.querySelector('footer').style.display = 'none';
+    buildStage();
+    buildHud();
+    updateHud();
+  });
+});
+
+const replayBtn = document.getElementById('replayBtn');
+replayBtn.addEventListener('click', () => {
+  replayBtn.disabled = true;
+  progress = 0;
+  updateHud();
+  layoutButtons(true); // cost: board reshuffles same as a wrong click
+  tauntEl.classList.remove('show');
+  showPattern(REPLAY_SECONDS, () => {
+    replayBtn.disabled = false;
+  });
+});
+</script>
+</body>
+</html>
