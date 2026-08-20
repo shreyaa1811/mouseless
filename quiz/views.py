@@ -82,7 +82,7 @@ class TaskListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         current_mode = 'keyboardless' if (site_setting and site_setting.dark_mode) else 'mouseless'
 
         # Only show tasks for the current phase
-        tasks = Task.objects.filter(question_type=current_mode).order_by('points', 'order')
+        tasks = Task.objects.filter(question_type=current_mode).order_by('order')
         for task in tasks:
             task.completed = task.is_completed(self.request.user)
             task.forfeited = task.is_forfeited(self.request.user)
